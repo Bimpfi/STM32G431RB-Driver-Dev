@@ -31,11 +31,13 @@ void I2C_Master::init() {
 
   I2C1->CR1 |= I2C_CR1_PE_Msk;
 }
-void I2C_Master::write(uint8_t addr, uint8_t *data, uint16_t len,
+void I2C_Master::write(uint8_t addr,
+                       uint8_t* data,
+                       uint16_t len,
                        bool repeated_start) {
   I2C1->CR2 |= addr << (I2C_CR2_SADD_Pos + 1);
   I2C1->CR2 &= ~I2C_CR2_RD_WRN_Msk;
-  
+  uint16_t pos = 0;
   while (len > 0) {
     uint8_t tx_len;
     if (len > 0xFF) {
@@ -48,28 +50,37 @@ void I2C_Master::write(uint8_t addr, uint8_t *data, uint16_t len,
       len = 0;
     }
 
-    I2C1->CR2 &= ~I2C_CR2_NBYTES_Msk; // Reset NBYTES register
+    I2C1->CR2 &= ~I2C_CR2_NBYTES_Msk;  // Reset NBYTES register
     I2C1->CR2 |= tx_len << I2C_CR2_NBYTES_Pos;
     I2C1->CR2 |= I2C_CR2_START_Msk;
-    for (uint8_t i = 0; i < tx_len; i++) {
+    while (tx_len--) {
       while (!(I2C1->ISR & I2C_ISR_TXIS_Msk)) {
         if (I2C1->ISR & I2C_ISR_NACKF_Msk) {
           I2C1->CR2 |= I2C_CR2_STOP_Msk;
+          I2C1->ICR |= I2C_ICR_STOPCF_Msk;
           return;
         }
       }
-      I2C1->TXDR = data[i] << I2C_TXDR_TXDATA_Pos;
+      I2C1->TXDR = data[pos++] << I2C_TXDR_TXDATA_Pos;
+    }
+    uint32_t tmp = I2C1->CR2;
+    if (tmp & I2C_CR2_RELOAD_Msk) {
+      while (!(I2C1->ISR & I2C_ISR_TCR_Msk))
+        ;
     }
   }
 
   if (!repeated_start) {
-    while(!(I2C1->ISR & I2C_ISR_TC_Msk));
+    while (!(I2C1->ISR & I2C_ISR_TC_Msk))
+      ;
     I2C1->CR2 |= I2C_CR2_STOP_Msk;
-    volatile uint8_t debug = 1;
+    I2C1->ICR |= I2C_ICR_STOPCF_Msk;
     return;
   }
 }
-void I2C_Master::read(uint8_t addr, uint8_t *data, uint16_t len,
+void I2C_Master::read(uint8_t addr,
+                      uint8_t* data,
+                      uint16_t len,
                       bool stop_cond) {
   uint16_t counter = 0;
   I2C1->CR2 |= I2C_CR2_RD_WRN_Msk;
@@ -89,7 +100,8 @@ void I2C_Master::read(uint8_t addr, uint8_t *data, uint16_t len,
     I2C1->CR2 |= tx_len << I2C_CR2_NBYTES_Pos;
     I2C1->CR2 |= I2C_CR2_START_Msk;
     for (uint8_t i = 0; i < tx_len; i++) {
-      while (!(I2C1->ISR & I2C_ISR_RXNE_Msk));
+      while (!(I2C1->ISR & I2C_ISR_RXNE_Msk))
+        ;
 
       data[counter++] = I2C1->RXDR;
     }
