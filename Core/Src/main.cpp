@@ -95,8 +95,11 @@ int main(void) {
       display.setPixel(63 + i, 0, 1);
     }
     display.showDisplay();
+    LL_mDelay(1000);
     display.clearDisplay();
     display.showDisplay();
+    // display.clearDisplay();
+    // display.showDisplay();
     // uint8_t ret[14] = {0x00};
     // ret[12] = 0x0D;
     // ret[13] = 0x0A;
