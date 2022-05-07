@@ -37,53 +37,57 @@ void I2C_Master::write(uint8_t addr,
                        bool repeated_start) {
   I2C1->CR2 |= addr << (I2C_CR2_SADD_Pos + 1);
   I2C1->CR2 &= ~I2C_CR2_RD_WRN_Msk;
+
   volatile uint16_t pos = 0;
+
   while (true) {
     uint8_t tx_len;
     if (len > 0xFF) {
       I2C1->CR2 |= I2C_CR2_RELOAD_Msk;
+      I2C1->CR2 &= ~I2C_CR2_AUTOEND_Msk;
       tx_len = 0xFF;
       len -= 0xFF;
     } else {
       I2C1->CR2 &= ~I2C_CR2_RELOAD_Msk;
+      if (repeated_start) {
+        I2C1->CR2 &= ~I2C_CR2_AUTOEND_Msk;
+      } else {
+        I2C1->CR2 |= I2C_CR2_AUTOEND_Msk;
+      }
       tx_len = len;
       len = 0;
     }
 
     I2C1->CR2 &= ~I2C_CR2_NBYTES_Msk;  // Reset NBYTES register
     I2C1->CR2 |= tx_len << I2C_CR2_NBYTES_Pos;
+
     if (pos == 0) {
       I2C1->CR2 |= I2C_CR2_START_Msk;
     }
+
     while (tx_len--) {
       while (!(I2C1->ISR & I2C_ISR_TXIS_Msk)) {
         if (I2C1->ISR & I2C_ISR_NACKF_Msk) {
-          while (I2C1->ISR & I2C_ISR_BUSY_Msk)
-            ;
           return;
         }
       }
       I2C1->TXDR = data[pos++] << I2C_TXDR_TXDATA_Pos;
     }
-    if (!(I2C1->CR2 & I2C_CR2_RELOAD_Msk)) {
-      uint16_t timeout = 0;
-      if (!repeated_start) {
-        while (!(I2C1->ISR & I2C_ISR_TC_Msk)) {
-          if (((I2C1->ISR >> I2C_ISR_TXE_Pos) &
-               (I2C1->ISR >> I2C_ISR_TXE_Pos)) &&
-              (timeout++) > 1000) {
-            I2C1->CR1 &= ~I2C_CR1_PE_Msk;
-            I2C1->CR1 |= I2C_CR1_PE_Msk;
-          }
-          return;
-        }
 
-        I2C1->CR2 |= I2C_CR2_STOP_Msk;
-        while (I2C1->ISR & I2C_ISR_BUSY_Msk)
+    if (!(I2C1->CR2 & I2C_CR2_RELOAD_Msk)) {
+      uint16_t wait = 512;
+      if (!repeated_start) {
+        while (wait-- != 0)
           ;
-        I2C1->ICR |= I2C_ICR_STOPCF_Msk;
+        if ((I2C1->ISR & I2C_ISR_TXIS_Msk) || !(I2C1->ISR & I2C_ISR_TXE)) {
+          I2C1->CR1 &= ~I2C_CR1_PE_Msk;
+          I2C1->CR1 |= I2C_CR1_PE_Msk;
+        }
         return;
       }
+
+      while (!(I2C1->ISR & I2C_ISR_TC_Msk))
+        ;
     } else if (I2C1->CR2 & I2C_CR2_RELOAD_Msk) {
       while (!(I2C1->ISR & I2C_ISR_TCR_Msk))
         ;
