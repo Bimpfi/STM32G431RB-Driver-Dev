@@ -33,7 +33,7 @@ int main(void) {
   // I2C_Master i2c_master;
   SSD1306<128, 64, 8, 0x3D, I2C_Master::write> display;
   UART uart;
-  // MPU_6050<MPU_6050_ADDR::ADD0_LOW, I2C_Master> mpu_6050;
+  MPU_6050<MPU_6050_ADDR::ADD0_LOW, I2C_Master> mpu_6050;
   /* Reset of all peripherals, Initializes the Flash interface and the Systick.
    */
 
@@ -67,57 +67,43 @@ int main(void) {
   // i2c_master.init();
   uart.init();
   I2C_Master::init();
+  mpu_6050.init();
   display.init();
-
-  // mpu_6050.init();
 
   float accX = 0.0f;
   float accY = 0.0f;
   float accZ = 0.0f;
 
+  uint16_t pixel = 0;
+
   while (1) {
-    for (uint8_t i = 0; i < 64; i++) {
-      display.setPixel(i, i, 1);
-      display.setPixel(i, 63 - i, 1);
-      display.setPixel(63 + i, i, 1);
-      display.setPixel(63 + i, 63 - i, 1);
-      display.setPixel(i, 31, 1);
-      display.setPixel(63 + i, 31, 1);
-      display.setPixel(31, i, 1);
-      display.setPixel(63 + i, 31, 1);
-      display.setPixel(63, i, 1);
-      display.setPixel(95, i, 1);
-      display.setPixel(i, 0, 1);
-      display.setPixel(0, i, 1);
-      display.setPixel(127, i, 1);
-      display.setPixel(i, 63, 1);
-      display.setPixel(63 + i, 63, 1);
-      display.setPixel(63 + i, 0, 1);
-    }
+    display.setPixel(pixel % 128, (pixel / 128) % 64, 1);
+    // display.printSymbol('a');
     display.showDisplay();
-    LL_mDelay(1000);
-    display.clearDisplay();
-    display.showDisplay();
+    LL_mDelay(1);
+    pixel++;
     // display.clearDisplay();
     // display.showDisplay();
-    // uint8_t ret[14] = {0x00};
-    // ret[12] = 0x0D;
-    // ret[13] = 0x0A;
-    // uint8_t ret_zero[2] = {0x0D, 0x0A};
-    // mpu_6050.measure();
-    // for (uint8_t i = 0; i < 15; i++) {
-    //   MPU_6050_Measurement vals = mpu_6050.getMeasurement();
-    //   accX = accX * 0.2f + vals.acc_data.calculated.x * 0.8f;
-    //   accY = accY * 0.2f + vals.acc_data.calculated.y * 0.8f;
-    //   accZ = accZ * 0.2f + vals.acc_data.calculated.z * 0.8f;
-    // }
+    //  display.clearDisplay();
+    //  display.showDisplay();
+    uint8_t ret[14] = {0x00};
+    ret[12] = 0x0D;
+    ret[13] = 0x0A;
+    uint8_t ret_zero[2] = {0x0D, 0x0A};
+    mpu_6050.measure();
+    for (uint8_t i = 0; i < 15; i++) {
+      MPU_6050_Measurement vals = mpu_6050.getMeasurement();
+      accX = accX * 0.2f + vals.acc_data.calculated.x * 0.8f;
+      accY = accY * 0.2f + vals.acc_data.calculated.y * 0.8f;
+      accZ = accZ * 0.2f + vals.acc_data.calculated.z * 0.8f;
+    }
 
-    // if (accX > 1.6f) {
-    //   GPIOA->ODR ^= LL_GPIO_PIN_5;
-    //   LL_mDelay(1000);
-    //   GPIOA->ODR ^= LL_GPIO_PIN_5;
-    //   LL_mDelay(1000);
-    // }
+    if (accX > 1.6f) {
+      GPIOA->ODR ^= LL_GPIO_PIN_5;
+      LL_mDelay(1000);
+      GPIOA->ODR ^= LL_GPIO_PIN_5;
+      LL_mDelay(1000);
+    }
   }
 }
 
