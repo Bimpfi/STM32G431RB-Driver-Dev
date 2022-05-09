@@ -109,6 +109,7 @@ class SSD1306 {
 
   void init() {
     this->commandLine(init_cmds, sizeof(init_cmds));
+    this->setPosition(0, 0);
     RCC->AHB1ENR |= 0x10;
     TIM6->PSC = 16000 - 1;
     TIM6->ARR = 49;
@@ -251,6 +252,23 @@ class SSD1306 {
   }
 
   void showDisplay() {
+    // unsigned char buf_out[(WIDTH * HEIGHT) / PPB + 1] = {
+    //     CONTROL_BYTE_COMMANDS::SEND_MULTIPLE_DATA};
+
+    // if (this->current_column != 0 || this->current_page != 0) {
+    //   this->setPosition(0, 0);
+    // }
+
+    // memcpy(buf_out + 1, this->framebuffer, (WIDTH * HEIGHT) / PPB);
+    // i2c_write(ADDR, buf_out, sizeof(buf_out), false);
+
+    // if (this->current_column != 0 || this->current_page != 0) {
+    //   this->setPosition(this->current_page, this->current_column);
+    // }
+    this->showDisplayInMultipleTransmissions();
+  }
+
+  void showDisplayInMultipleTransmissions() {
     unsigned char buf_out[(WIDTH * HEIGHT) / PPB + 1] = {
         CONTROL_BYTE_COMMANDS::SEND_MULTIPLE_DATA};
 
@@ -258,8 +276,13 @@ class SSD1306 {
       this->setPosition(0, 0);
     }
 
-    memcpy(buf_out + 1, this->framebuffer, (WIDTH * HEIGHT) / PPB);
-    i2c_write(ADDR, buf_out, sizeof(buf_out), false);
+    for (uint8_t i = 0; i < 4; i++) {
+      memcpy(buf_out + 1, this->framebuffer + (i * 254), 254);
+      i2c_write(ADDR, buf_out, 255, false);
+    }
+
+    memcpy(buf_out + 1, this->framebuffer + (4 * 254), 8);
+    i2c_write(ADDR, buf_out, 9, false);
 
     if (this->current_column != 0 || this->current_page != 0) {
       this->setPosition(this->current_page, this->current_column);
