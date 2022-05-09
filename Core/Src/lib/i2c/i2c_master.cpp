@@ -25,7 +25,7 @@ void I2C_Master::init() {
   //	I2C1->CR2 |= I2C_CR2_RELOAD_Msk;
   I2C1->CR2 &= ~I2C_CR2_ADD10_Msk;
   I2C1->TIMINGR |=
-      (0x07 << I2C_TIMINGR_PRESC_Pos) | (0x13 << I2C_TIMINGR_SCLL_Pos) |
+      (0x03 << I2C_TIMINGR_PRESC_Pos) | (0x13 << I2C_TIMINGR_SCLL_Pos) |
       (0x0F << I2C_TIMINGR_SCLH_Pos) | (0x02 << I2C_TIMINGR_SDADEL_Pos) |
       (0x04 << I2C_TIMINGR_SCLDEL_Pos);
 
@@ -81,6 +81,8 @@ void I2C_Master::write(uint8_t addr,
           ;
         if ((I2C1->ISR & I2C_ISR_TXIS_Msk) || !(I2C1->ISR & I2C_ISR_TXE)) {
           I2C1->CR1 &= ~I2C_CR1_PE_Msk;
+          while (I2C1->CR1 & I2C_CR1_PE_Msk)
+            ;
           I2C1->CR1 |= I2C_CR1_PE_Msk;
         }
         return;
