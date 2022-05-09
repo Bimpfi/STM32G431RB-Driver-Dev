@@ -35,6 +35,7 @@ void I2C_Master::write(uint8_t addr,
                        uint8_t* data,
                        uint16_t len,
                        bool repeated_start) {
+  I2C1->CR2 &= ~I2C_CR2_SADD_Msk;
   I2C1->CR2 |= addr << (I2C_CR2_SADD_Pos + 1);
   I2C1->CR2 &= ~I2C_CR2_RD_WRN_Msk;
 
@@ -101,16 +102,24 @@ void I2C_Master::read(uint8_t addr,
                       uint16_t len,
                       bool stop_cond) {
   uint16_t counter = 0;
+  I2C1->CR2 &= ~I2C_CR2_SADD_Msk;
+  I2C1->CR2 |= addr << (I2C_CR2_SADD_Pos + 1);
   I2C1->CR2 |= I2C_CR2_RD_WRN_Msk;
   while (len > 0) {
     uint8_t tx_len;
 
     if (len > 0xFF) {
       I2C1->CR2 |= I2C_CR2_RELOAD_Msk;
+      I2C1->CR2 &= ~I2C_CR2_AUTOEND_Msk;
       tx_len = 0xFF;
       len -= 0xFF;
     } else {
       I2C1->CR2 &= ~I2C_CR2_RELOAD_Msk;
+      if (!stop_cond) {
+        I2C1->CR2 &= ~I2C_CR2_AUTOEND_Msk;
+      } else {
+        I2C1->CR2 |= I2C_CR2_AUTOEND_Msk;
+      }
       tx_len = len;
       len = 0;
     }
@@ -124,8 +133,8 @@ void I2C_Master::read(uint8_t addr,
       data[counter++] = I2C1->RXDR;
     }
 
-    if ((I2C1->ISR & I2C_ISR_TC_Msk) && !stop_cond) {
-      I2C1->CR2 |= I2C_CR2_STOP_Msk;
-    }
+    // if ((I2C1->ISR & I2C_ISR_TC_Msk) && !stop_cond) {
+    //   I2C1->CR2 |= I2C_CR2_STOP_Msk;
+    // }
   }
 }
