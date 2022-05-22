@@ -38,7 +38,9 @@ BUILD_DIR = build
 CPP_SOURCES = \
 Core/Src/main.cpp \
 Core/Src/lib/i2c/i2c_master.cpp \
+Core/Src/lib/spi/spi_master.cpp \
 Core/Src/lib/uart/uart.cpp \
+Core/Src/lib/led/ws2812b/neopixel.cpp \
 
 # C sources
 C_SOURCES =  \
@@ -119,7 +121,9 @@ C_INCLUDES =  \
 -IDrivers/CMSIS/Device/ST/STM32G4xx/Include \
 -IDrivers/CMSIS/Include \
 -ICore/Inc/lib/i2c \
+-ICore/Inc/lib/spi \
 -ICore/Inc/lib/uart \
+-ICore/Inc/lib/led/ws2812b \
 -ICore/Inc/lib/mpu_6500 \
 -ICore/Inc/lib/mpu_6050 \
 -ICore/Inc/lib/ssd1306 \
