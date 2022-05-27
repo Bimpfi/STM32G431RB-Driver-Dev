@@ -22,6 +22,7 @@
 #include "i2c_master.h"
 #include "mpu_6050.h"
 #include "neopixel.h"
+#include "spi_master.h"
 #include "ssd1306.h"
 #include "uart.h"
 
@@ -36,7 +37,9 @@ int main(void) {
   UART uart;
   MPU_6050<MPU_6050_ADDR::ADD0_LOW, I2C_Master> mpu_6050;
   Neopixel neopixel;
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
+  SPI_Master spi;
+  /* Reset of all peripherals, Initializes the Flash interface and the
+   * Systick.
    */
 
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
@@ -71,6 +74,7 @@ int main(void) {
   // I2C_Master::init();
   // mpu_6050.init();
   // display.init();
+  spi.init();
   neopixel.init();
   neopixel.clear();
 
@@ -81,10 +85,13 @@ int main(void) {
   uint16_t pixel = 0;
 
   while (1) {
-    neopixel.clear();
-    neopixel.set(neoColor::BLUE, pixel++ % 9);
-    neopixel.show();
-    LL_mDelay(100);
+    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
+    spi.write(data, sizeof(data) / sizeof(uint8_t));
+    LL_mDelay(1000);
+    // neopixel.clear();
+    // neopixel.set(neoColor::BLUE, pixel++ % 9);
+    // neopixel.show();
+    // LL_mDelay(100);
     // display.setPixel(pixel % 128, (pixel / 128) % 64, 1);
     // // display.printSymbol('a');
     // display.showDisplay();
