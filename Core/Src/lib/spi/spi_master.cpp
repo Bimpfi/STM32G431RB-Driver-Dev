@@ -22,20 +22,32 @@ void SPI_Master::init() {
                          GPIO_AFRL_AFSEL6_Msk | GPIO_AFRL_AFSEL7_Msk)) |
       (0x05 << GPIO_AFRL_AFSEL4_Pos) | (0x05 << GPIO_AFRL_AFSEL5_Pos) |
       (0x05 << GPIO_AFRL_AFSEL6_Pos) | (0x05 << GPIO_AFRL_AFSEL7_Pos);
-  SPI1->CR1 = (0x04 << SPI_CR1_BR_Pos) | SPI_CR1_MSTR_Msk;
-  SPI1->CR2 |= SPI_CR2_SSOE_Msk | (0x7 & SPI_CR2_DS_Msk);
+
+  SPI1->CR1 =
+      SPI_CR1_BIDIMODE_Msk | SPI_CR1_BIDIOE_Msk |
+      (0x02 << SPI_CR1_BR_Pos) | /* SPI_CR1_SSM_Msk | SPI_CR1_SSI_Msk | */
+      SPI_CR1_MSTR_Msk;
+  SPI1->CR2 |= SPI_CR2_SSOE_Msk | (0x07 & SPI_CR2_DS_Msk);
+  // SPI1->CR1 |= SPI_CR1_SPE_Msk;
 }
 
 void SPI_Master::write(uint8_t* data, uint32_t len) {
+  if (len == 0 || data == nullptr)
+    return;
+
   SPI1->CR1 |= SPI_CR1_SPE_Msk;
+
   while (len--) {
-    SPI1->DR = *data;
-    // while (((SPI1->SR & SPI_SR_FRLVL_Msk) >> SPI_SR_FRLVL_Pos) == 0x03)
-    //   ;
-    data++;
-    while (!(SPI1->SR & SPI_SR_TXE_Msk) && (SPI1->SR & SPI_SR_BSY_Msk))
+    while (!(SPI1->SR & SPI_SR_TXE_Msk))
       ;
+    volatile uint8_t payload = *data;
+    *(uint8_t*)&SPI1->DR = static_cast<unsigned char>(*data);
+    data++;
   }
+
+  while (((SPI1->SR & SPI_SR_FTLVL_Msk) >> SPI_SR_FTLVL_Pos) != 0x00 ||
+         ((SPI1->SR & SPI_SR_BSY_Msk)))
+    ;
 
   SPI1->CR1 &= ~SPI_CR1_SPE_Msk;
 }
