@@ -60,14 +60,20 @@ int main(void) {
   SystemClock_Config();
 
   /* Initialize all configured peripherals */
-  // RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN_Msk;
+  RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN_Msk;
+  GPIOB->MODER |= GPIO_MODER_MODER0_0 | GPIO_MODER_MODER5_0;
+  GPIOB->MODER &= ~(GPIO_MODER_MODER0_1 | GPIO_MODER_MODER5_1);
+  GPIOB->OTYPER &= ~(GPIO_OTYPER_OT0 | GPIO_OTYPER_OT5);
 
-  // GPIOA->MODER |= GPIO_MODER_MODER5_0;
-  // GPIOA->MODER &= ~GPIO_MODER_MODER5_1;
-  // GPIOA->OTYPER &= ~GPIO_OTYPER_OT5;
+  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR5_0);
+  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR5_1);
 
-  // GPIOA->PUPDR &= ~GPIO_PUPDR_PUPDR5_0;
-  // GPIOA->PUPDR &= ~GPIO_PUPDR_PUPDR5_1;
+  GPIOB->ODR |= GPIO_ODR_OD0_Msk;
+  LL_mDelay(200);
+  GPIOB->ODR &= ~GPIO_ODR_OD0_Msk;
+  LL_mDelay(200);
+  GPIOB->ODR |= GPIO_ODR_OD0_Msk;
+  LL_mDelay(200);
 
   // i2c_master.init();
   // uart.init();
@@ -83,11 +89,72 @@ int main(void) {
   float accZ = 0.0f;
 
   uint16_t pixel = 0;
+  GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
+  uint8_t init_data[] = {0x01, 0x11, 0x3A, 0x05, 0x13, 0x29, 0x36, 0x60};
+  spi.write(init_data, 1);
+  LL_mDelay(150);
+  spi.write(&init_data[1], 1);
+  LL_mDelay(500);
+  spi.write(&init_data[2], 1);
+  GPIOB->ODR |= GPIO_ODR_OD5_Msk;
+  spi.write(&init_data[3], 1);
+  GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
+  LL_mDelay(150);
+  spi.write(&init_data[4], 1);
+  LL_mDelay(150);
+  spi.write(&init_data[5], 1);
+  LL_mDelay(150);
+  spi.write(&init_data[6], 1);
+  GPIOB->ODR |= GPIO_ODR_OD5_Msk;
+  spi.write(&init_data[7], 1);
+
+  uint8_t red = 0xff;
+  uint8_t green = 0x00;
+  uint8_t blue = 0x00;
 
   while (1) {
-    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
-    spi.write(data, sizeof(data) / sizeof(uint8_t));
-    LL_mDelay(1000);
+    uint8_t init_row[] = {0x2A, 0x00, 0x00, 0x00, 0xA0};
+    uint8_t init_col[] = {0x2B, 0x00, 0x00, 0x00, 0x7F};
+    uint8_t init_data[] = {0x2C};
+    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
+    spi.write(init_row, 1);
+    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
+    spi.write(&init_row[1], 4);
+    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
+    spi.write(init_col, 1);
+    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
+    spi.write(&init_col[1], 4);
+    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
+    spi.write(&init_data[0], 1);
+
+    volatile uint8_t data[2] = {0x00};
+    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
+    for (uint32_t i = 0; i < 20480; i++) {
+      // red += 4;
+      // if (red == 0x00) {
+      //   blue += 4;
+      // }
+
+      // if (red == 0x00 && blue == 0) {
+      //   green += 4;
+      // }
+
+      data[0] = ((red << 6) & 0xFF) | (green & 0x3F);
+      data[1] = ((blue << 2) & 0xFC) | (red & 0x03);
+      spi.write(const_cast<uint8_t*>(data), sizeof(data) / sizeof(uint8_t));
+    }
+    if (red == 0xff) {
+      green ^= 0xff;
+      red ^= 0xff;
+    } else if (green == 0xff) {
+      green ^= 0xff;
+      blue ^= 0xff;
+    } else {
+      blue ^= 0xff;
+      red ^= 0xff;
+    }
+
+    LL_mDelay(1);
     // neopixel.clear();
     // neopixel.set(neoColor::BLUE, pixel++ % 9);
     // neopixel.show();
