@@ -41,6 +41,7 @@ Core/Src/lib/i2c/i2c_master.cpp \
 Core/Src/lib/spi/spi_master.cpp \
 Core/Src/lib/uart/uart.cpp \
 Core/Src/lib/led/ws2812b/neopixel.cpp \
+Core/Src/lib/st77xx/fonts/fonts.cpp \
 
 # C sources
 C_SOURCES =  \
@@ -127,6 +128,8 @@ C_INCLUDES =  \
 -ICore/Inc/lib/mpu_6500 \
 -ICore/Inc/lib/mpu_6050 \
 -ICore/Inc/lib/ssd1306 \
+-ICore/Inc/lib/st77xx \
+-ICore/Inc/lib/st77xx/fonts \
 
 # compile g++ flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -fno-exceptions
