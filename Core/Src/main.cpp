@@ -24,6 +24,7 @@
 #include "neopixel.h"
 #include "spi_master.h"
 #include "ssd1306.h"
+#include "st77xx.h"
 #include "uart.h"
 
 void SystemClock_Config(void);
@@ -34,10 +35,10 @@ void SystemClock_Config(void);
 int main(void) {
   // I2C_Master i2c_master;
   SSD1306<128, 64, 8, 0x3D, I2C_Master::write> display;
+  ST77XX<SPI_Master::write> st77xx;
   UART uart;
   MPU_6050<MPU_6050_ADDR::ADD0_LOW, I2C_Master> mpu_6050;
   Neopixel neopixel;
-  SPI_Master spi;
   /* Reset of all peripherals, Initializes the Flash interface and the
    * Systick.
    */
@@ -59,28 +60,12 @@ int main(void) {
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* Initialize all configured peripherals */
-  RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN_Msk;
-  GPIOB->MODER |= GPIO_MODER_MODER0_0 | GPIO_MODER_MODER5_0;
-  GPIOB->MODER &= ~(GPIO_MODER_MODER0_1 | GPIO_MODER_MODER5_1);
-  GPIOB->OTYPER &= ~(GPIO_OTYPER_OT0 | GPIO_OTYPER_OT5);
-
-  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR5_0);
-  GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR5_1);
-
-  GPIOB->ODR |= GPIO_ODR_OD0_Msk;
-  LL_mDelay(200);
-  GPIOB->ODR &= ~GPIO_ODR_OD0_Msk;
-  LL_mDelay(200);
-  GPIOB->ODR |= GPIO_ODR_OD0_Msk;
-  LL_mDelay(200);
-
   // i2c_master.init();
   // uart.init();
   // I2C_Master::init();
   // mpu_6050.init();
   // display.init();
-  spi.init();
+  SPI_Master::init();
   neopixel.init();
   neopixel.clear();
 
@@ -89,72 +74,11 @@ int main(void) {
   float accZ = 0.0f;
 
   uint16_t pixel = 0;
-  GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
-  uint8_t init_data[] = {0x01, 0x11, 0x3A, 0x05, 0x13, 0x29, 0x36, 0x60};
-  spi.write(init_data, 1);
-  LL_mDelay(150);
-  spi.write(&init_data[1], 1);
-  LL_mDelay(500);
-  spi.write(&init_data[2], 1);
-  GPIOB->ODR |= GPIO_ODR_OD5_Msk;
-  spi.write(&init_data[3], 1);
-  GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
-  LL_mDelay(150);
-  spi.write(&init_data[4], 1);
-  LL_mDelay(150);
-  spi.write(&init_data[5], 1);
-  LL_mDelay(150);
-  spi.write(&init_data[6], 1);
-  GPIOB->ODR |= GPIO_ODR_OD5_Msk;
-  spi.write(&init_data[7], 1);
 
-  uint8_t red = 0xff;
-  uint8_t green = 0x00;
-  uint8_t blue = 0x00;
-
+  st77xx.init();
+  st77xx.fillScreen();
   while (1) {
-    uint8_t init_row[] = {0x2A, 0x00, 0x00, 0x00, 0xA0};
-    uint8_t init_col[] = {0x2B, 0x00, 0x00, 0x00, 0x7F};
-    uint8_t init_data[] = {0x2C};
-    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
-    spi.write(init_row, 1);
-    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
-    spi.write(&init_row[1], 4);
-    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
-    spi.write(init_col, 1);
-    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
-    spi.write(&init_col[1], 4);
-    GPIOB->ODR = ~(GPIO_ODR_OD5_Msk);
-    spi.write(&init_data[0], 1);
-
-    volatile uint8_t data[2] = {0x00};
-    GPIOB->ODR |= GPIO_ODR_OD5_Msk;
-    for (uint32_t i = 0; i < 20480; i++) {
-      // red += 4;
-      // if (red == 0x00) {
-      //   blue += 4;
-      // }
-
-      // if (red == 0x00 && blue == 0) {
-      //   green += 4;
-      // }
-
-      data[0] = ((red << 6) & 0xFF) | (green & 0x3F);
-      data[1] = ((blue << 2) & 0xFC) | (red & 0x03);
-      spi.write(const_cast<uint8_t*>(data), sizeof(data) / sizeof(uint8_t));
-    }
-    if (red == 0xff) {
-      green ^= 0xff;
-      red ^= 0xff;
-    } else if (green == 0xff) {
-      green ^= 0xff;
-      blue ^= 0xff;
-    } else {
-      blue ^= 0xff;
-      red ^= 0xff;
-    }
-
-    LL_mDelay(1);
+    st77xx.showTestImage();
     // neopixel.clear();
     // neopixel.set(neoColor::BLUE, pixel++ % 9);
     // neopixel.show();
