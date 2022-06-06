@@ -13,9 +13,9 @@ extern "C" {
 
 class SPI_Master : public SPI_Interface<SPI_Master> {
  public:
-  void init();
-  void write(uint8_t* data, uint32_t len);
-  void read(uint8_t* data, uint32_t len);
+  static void init();
+  static void write(uint8_t* data, uint32_t len);
+  static void read(uint8_t* data, uint32_t len);
 };
 
 #endif /* __SPI_MASTER_H */
